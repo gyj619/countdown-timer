@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 import threading
 import winsound
+from datetime import datetime, timedelta, timezone
 
 STATES = {"IDLE": "idle", "RUNNING": "running", "PAUSED": "paused"}
 
@@ -18,7 +19,7 @@ class CountdownApp:
         self._after_id = None
 
         self._build_ui()
-        self._center_window(400, 350)
+        self._center_window(400, 390)
 
     def _center_window(self, width, height):
         screen_w = self.root.winfo_screenwidth()
@@ -36,7 +37,12 @@ class CountdownApp:
         self.time_label = ttk.Label(
             self.root, text="00:00:00", font=("Consolas", 48)
         )
-        self.time_label.pack(pady=(10, 20))
+        self.time_label.pack(pady=(10, 10))
+
+        self.end_time_label = ttk.Label(
+            self.root, text="", font=("Microsoft YaHei", 10)
+        )
+        self.end_time_label.pack(pady=(0, 15))
 
         # 时间输入
         input_frame = ttk.Frame(self.root)
@@ -114,6 +120,11 @@ class CountdownApp:
         for w in self.inputs:
             w.state([state])
 
+    def _show_end_time(self):
+        bj_tz = timezone(timedelta(hours=8))
+        end = datetime.now(bj_tz) + timedelta(seconds=self.remaining)
+        self.end_time_label.config(text=f"预计结束：{end.strftime('%Y-%m-%d %H:%M:%S')}")
+
     def _set_buttons(self, start, pause, reset):
         self.start_btn.state(["!disabled"] if start else ["disabled"])
         self.pause_btn.state(["!disabled"] if pause else ["disabled"])
@@ -132,6 +143,7 @@ class CountdownApp:
                 + self.sec_var.get()
             )
             self._toggle_inputs(False)
+            self._show_end_time()
 
         self.state = STATES["RUNNING"]
         self._set_buttons(False, True, True)
@@ -151,6 +163,7 @@ class CountdownApp:
         self.state = STATES["IDLE"]
         self.remaining = 0
         self._update_display()
+        self.end_time_label.config(text="")
         self._toggle_inputs(True)
         self._set_buttons(True, False, True)
 
