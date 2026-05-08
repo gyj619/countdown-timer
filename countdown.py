@@ -19,7 +19,7 @@ class CountdownApp:
         self._after_id = None
 
         self._build_ui()
-        self._center_window(400, 390)
+        self._center_window(400, 450)
 
     def _center_window(self, width, height):
         screen_w = self.root.winfo_screenwidth()
@@ -90,9 +90,32 @@ class CountdownApp:
             side=tk.LEFT,
         )
 
+        # 预设快捷时长
+        preset_frame = ttk.LabelFrame(self.root, text="快捷预设", padding=8)
+        preset_frame.pack(pady=(5, 0))
+
+        presets = [
+            ("5 分", 0, 5, 0),
+            ("10 分", 0, 10, 0),
+            ("15 分", 0, 15, 0),
+            ("25 分", 0, 25, 0),
+            ("30 分", 0, 30, 0),
+            ("45 分", 0, 45, 0),
+            ("1 时", 1, 0, 0),
+            ("2 时", 2, 0, 0),
+        ]
+        for i, (label, h, m, s) in enumerate(presets):
+            btn = ttk.Button(
+                preset_frame,
+                text=label,
+                width=6,
+                command=lambda h=h, m=m, s=s: self._set_preset(h, m, s),
+            )
+            btn.grid(row=i // 4, column=i % 4, padx=3, pady=2)
+
         # 按钮
         btn_frame = ttk.Frame(self.root)
-        btn_frame.pack(pady=25)
+        btn_frame.pack(pady=(15, 20))
 
         self.start_btn = ttk.Button(btn_frame, text="开始", command=self.start)
         self.start_btn.pack(side=tk.LEFT, padx=5)
@@ -129,6 +152,13 @@ class CountdownApp:
         self.start_btn.state(["!disabled"] if start else ["disabled"])
         self.pause_btn.state(["!disabled"] if pause else ["disabled"])
         self.reset_btn.state(["!disabled"] if reset else ["disabled"])
+
+    def _set_preset(self, h, m, s):
+        if self.state != STATES["IDLE"]:
+            return
+        self.hour_var.set(h)
+        self.min_var.set(m)
+        self.sec_var.set(s)
 
     def _is_time_zero(self):
         return self.hour_var.get() == 0 and self.min_var.get() == 0 and self.sec_var.get() == 0
