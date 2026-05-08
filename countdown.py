@@ -15,11 +15,12 @@ class CountdownApp:
         self.root.attributes("-topmost", True)
 
         self.remaining = 0
+        self.total_remaining = 0
         self.state = STATES["IDLE"]
         self._after_id = None
 
         self._build_ui()
-        self._center_window(400, 450)
+        self._center_window(420, 560)
 
     def _center_window(self, width, height):
         screen_w = self.root.winfo_screenwidth()
@@ -30,14 +31,20 @@ class CountdownApp:
 
     def _build_ui(self):
         # 标题
-        title = ttk.Label(self.root, text="桌面倒计时", font=("Microsoft YaHei", 14))
-        title.pack(pady=(20, 10))
+        self.title_label = ttk.Label(self.root, text="桌面倒计时", font=("Microsoft YaHei", 14))
+        self.title_label.pack(pady=(20, 10))
 
         # 时间显示
         self.time_label = ttk.Label(
             self.root, text="00:00:00", font=("Consolas", 48)
         )
-        self.time_label.pack(pady=(10, 10))
+        self.time_label.pack(pady=(10, 5))
+
+        # 进度条
+        self.progress = ttk.Progressbar(
+            self.root, mode="determinate", length=300
+        )
+        self.progress.pack(pady=(0, 10))
 
         self.end_time_label = ttk.Label(
             self.root, text="", font=("Microsoft YaHei", 10)
@@ -115,7 +122,7 @@ class CountdownApp:
 
         # 按钮
         btn_frame = ttk.Frame(self.root)
-        btn_frame.pack(pady=(15, 20))
+        btn_frame.pack(pady=(10, 10))
 
         self.start_btn = ttk.Button(btn_frame, text="开始", command=self.start)
         self.start_btn.pack(side=tk.LEFT, padx=5)
@@ -129,6 +136,23 @@ class CountdownApp:
 
         self.inputs = [self.hour_spin, self.min_spin, self.sec_spin]
 
+        # 设置区（透明度）
+        settings_frame = ttk.LabelFrame(self.root, text="设置", padding=8)
+        settings_frame.pack(pady=(5, 10), fill="x", padx=20)
+
+        # 透明度滑块
+        opacity_frame = ttk.Frame(settings_frame)
+        opacity_frame.pack(fill="x", pady=2)
+        ttk.Label(opacity_frame, text="透明度：", font=("Microsoft YaHei", 9)).pack(side=tk.LEFT)
+        self.opacity_scale = ttk.Scale(
+            opacity_frame,
+            from_=0.2,
+            to=1.0,
+            value=1.0,
+            command=self._set_opacity,
+        )
+        self.opacity_scale.pack(side=tk.LEFT, padx=5, fill="x", expand=True)
+
     def _format_time(self, seconds):
         h = seconds // 3600
         m = (seconds % 3600) // 60
@@ -137,6 +161,11 @@ class CountdownApp:
 
     def _update_display(self):
         self.time_label.config(text=self._format_time(self.remaining))
+
+    def _update_progress(self):
+        if self.total_remaining > 0:
+            pct = (self.total_remaining - self.remaining) / self.total_remaining * 100
+            self.progress["value"] = pct
 
     def _toggle_inputs(self, enabled):
         state = "!disabled" if enabled else "disabled"
@@ -160,6 +189,9 @@ class CountdownApp:
         self.min_var.set(m)
         self.sec_var.set(s)
 
+    def _set_opacity(self, val):
+        self.root.attributes("-alpha", float(val))
+
     def _is_time_zero(self):
         return self.hour_var.get() == 0 and self.min_var.get() == 0 and self.sec_var.get() == 0
 
@@ -172,8 +204,10 @@ class CountdownApp:
                 + self.min_var.get() * 60
                 + self.sec_var.get()
             )
+            self.total_remaining = self.remaining
             self._toggle_inputs(False)
             self._show_end_time()
+            self.progress["value"] = 0
 
         self.state = STATES["RUNNING"]
         self._set_buttons(False, True, True)
@@ -192,8 +226,14 @@ class CountdownApp:
             self._after_id = None
         self.state = STATES["IDLE"]
         self.remaining = 0
+        self.total_remaining = 0
+        self.hour_var.set(0)
+        self.min_var.set(0)
+        self.sec_var.set(0)
         self._update_display()
+        self.progress["value"] = 0
         self.end_time_label.config(text="")
+        self.time_label.config(foreground="black")
         self._toggle_inputs(True)
         self._set_buttons(True, False, True)
 
@@ -201,11 +241,22 @@ class CountdownApp:
         if self.remaining > 0:
             self.remaining -= 1
             self._update_display()
+            self._update_progress()
+
+            # 最后 10 秒红色闪烁
+            if 0 < self.remaining <= 10:
+                if self.remaining % 2 == 0:
+                    self.time_label.config(foreground="red")
+                else:
+                    self.time_label.config(foreground="black")
+
             self._after_id = self.root.after(1000, self._tick)
         else:
             self._after_id = None
             self.state = STATES["IDLE"]
             self._update_display()
+            self.progress["value"] = 100
+            self.time_label.config(foreground="black")
             self._toggle_inputs(True)
             self._set_buttons(True, False, True)
             self._play_alarm()
